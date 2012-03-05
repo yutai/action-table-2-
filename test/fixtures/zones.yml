@@ -1,0 +1,17 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
+
+one:
+  site_name: MyString
+  name: MyString
+  width: 1
+  height: 1
+  auto_approve: false
+  active: false
+
+two:
+  site_name: MyString
+  name: MyString
+  width: 1
+  height: 1
+  auto_approve: false
+  active: false

@@ -1,0 +1,35 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <b>Site name:</b>
+  <%= @zone.site_name %>
+</p>
+
+<p>
+  <b>Name:</b>
+  <%= @zone.name %>
+</p>
+
+<p>
+  <b>Width:</b>
+  <%= @zone.width %>
+</p>
+
+<p>
+  <b>Height:</b>
+  <%= @zone.height %>
+</p>
+
+<p>
+  <b>Auto approve:</b>
+  <%= @zone.auto_approve %>
+</p>
+
+<p>
+  <b>Active:</b>
+  <%= @zone.active %>
+</p>
+
+
+<%= link_to 'Edit', edit_zone_path(@zone) %> |
+<%= link_to 'Back', zones_path %>
