@@ -18,7 +18,6 @@ ActionTable.Rows = {
 ActionTable.RowsView = {
 	
 	initialize: function(){ 
-
 		_.bindAll(this,'render','appendItem');
 		this.header = $(Mustache.to_html("<thead><th>Name</th><th>Site</th><th>Auto-approve</th></thead>", {})).appendTo(this.el);
 		this.tbody = $('<tbody></tbody>').appendTo($(this.el));
@@ -28,9 +27,11 @@ ActionTable.RowsView = {
 		this.collection.bind('sort',this.sort)
 		this.render();
 	},
+	philtered_array : [],
 	render: function(){
 		this.tbody.html('');
-		this.pager(this.collection.philter()).each(function(row){
+		this.philtered_array = this.collection.philter();
+		this.pager(this.philtered_array).each(function(row){
 			this.appendItem(row);
 		}, this)
 	},
@@ -44,33 +45,30 @@ ActionTable.RowsView = {
 		// sort direction
 		sortDirection: 'asc'
 	},
-	/*pager : function (philtered_array) {
-		var self = this,
-			start = (self.cParams.page-1)*this.cParams.perPage,
-			stop  = start+self.cParams.perPage;
-		console.log('in pager')
-		return _(philtered_array.slice(start, stop))
-	},*/
 	
 	nextPage : function () {
-			this.cParams.page = ++this.cParams.page;
-		this.pager();
+		this.cParams.page = ++this.cParams.page;
+		//this.pager();
+		this.render();
 	},
 
 	previousPage : function () {
 		this.cParams.page = --this.cParams.page || 1;
-		this.pager();
+		//this.pager();
+		this.render();
 	},
 
 	goTo : function (page) {
 		this.cParams.page = parseInt(page,10);
-		this.pager();
+		///this.pager();
+		this.render();
 	},
 
 	howManyPer : function (perPage) {
 		this.cParams.page = 1;
 		this.cParams.perPage = perPage;
-		this.pager();
+		//this.pager();
+		this.render();
 	},
 
 
@@ -79,21 +77,21 @@ ActionTable.RowsView = {
 		this.pager(column, direction);
 	},
 
-	pager : function (philtered_array, sort, direction) {
+	pager : function (sort, direction) {
 		var self = this,
 			start = (self.cParams.page-1)*this.cParams.perPage,
 			stop  = start+self.cParams.perPage;
 
 		
 		if (sort) {
-			philtered_array = self._sort(philtered_array, sort, direction);
+			this.philtered_array = self._sort(this.philtered_array, sort, direction);
 		}
 
-		return _(philtered_array.slice(start,stop))
+		return _(this.philtered_array.slice(start,stop))
 	},
 
-	_sort : function (philtered_array, sort, direction) {
-		philtered_array = philtered_array.sort(function(a,b) {
+	_sort : function (sort, direction) {
+		this.philtered_array = this.philtered_array.sort(function(a,b) {
 			var a = a.get(sort),
 				b = b.get(sort);
 
@@ -119,13 +117,13 @@ ActionTable.RowsView = {
 			return 0;
 		});
 
-		return philtered_array;
+		return this.philtered_array;
 	},
 
-	info : function (philtered_array) {
+	info : function () {
 		var self = this,
 			info = {},
-			totalRecords = philtered_array.length,
+			totalRecords = this.philtered_array.length,
 			totalPages = Math.ceil(totalRecords/self.perPage);
 
 		info = {
@@ -234,86 +232,286 @@ ActionTable.RowView = {
 	}
 };
 
-ActionTable.clientPagination = Backbone.View.extend({
-
-		events : {
-			'click a.first'        		: 'gotoFirst',
-			'click a.prev'         		: 'gotoPrev',
-			'click a.next'        		: 'gotoNext',
-			'click a.last'         		: 'gotoLast',
-			'click a.page'         		: 'gotoPage',
-			'click .howmany a'     		: 'changeCount',
-			'click a.sortAsc' 			: 'sortByAscending',
-			'click a.sortDsc'			: 'sortByDescending'
-		},
-
-		tagName : 'aside',
-
-		initialize : function () {
-			this.collection.bind('reset', this.render, this);
-			this.collection.bind('change', this.render, this);
-			this.tmpl = _.template($('#tmpClientPagination').html());
-			$(this.el).appendTo('#pagination');
-
-		},
-		render : function () {
-			var html = this.tmpl(this.view.info());
-			$(this.el).html(html);
-		},
-
-		gotoFirst : function (e) {
-			e.preventDefault();
-			this.view.goTo(1);
-		},
-
-		gotoPrev : function (e) {
-			e.preventDefault();
-			this.view.previousPage();
-		},
-
-		gotoNext : function (e) {
-			e.preventDefault();
-			this.view.nextPage();
-		},
-
-		gotoLast : function (e) {
-			e.preventDefault();
-			this.view.goTo(this.view.information.lastPage);
-		},
-
-		gotoPage : function (e) {
-			e.preventDefault();
-			var page = $(e.target).text();
-			this.view.goTo(page);
-		},
-
-		changeCount : function (e) {
-			e.preventDefault();
-			var per = $(e.target).text();
-			this.view.howManyPer(per);
-		},
-
-		sortByAscending: function(e){
-		    e.preventDefault();
-		    var currentSort = this.getSortOption();
-			this.view.pager(currentSort, 'asc');
-			//this.preserveSortOption(currentSort);
-
-		},
-/*
-		getSortOption: function(){
-			var sel = $('#sortByOption').val();
-			return sel;	
-		},
-
-		preserveSortOption: function(option){
-			$('#sortByOption').val(option);
-		},
-*/
-		sortByDescending: function(e){
-			e.preventDefault();
-		    var currentSort = this.getSortOption();
-			this.view.pager(currentSort, 'desc');
-			//this.preserveSortOption(currentSort);
+ActionTable.Paginate = {
+	Views : {},
+	init : function(targetView)
+	{
+		if (!this.paginate_area) this.paginate_area = $('<div class="action_table_tool pagination" ></div>').insertAfter(targetView.el);
+		if (!this.paginate_ul) this.paginate_ul = $('<ul class="paginate_ul"></ul>').appendTo(this.paginate_area);
+		
+		if (targetView.information.totalPages < 2) {
+			self.action_table('single_page');
+		} else {
+		
+			var current_page = targetView.information.page;
+			var page_data= [];
+			for (var i = 1; i<= targetView.information.totalPages; i++)
+			{
+				var page = {
+					name : i,
+					action : function(i)
+					{
+						targetView.goTo(i)
+						//self.action_table('move_to_page', i)
+					}
+				}
+				if (current_page == (i)) page.selected = true;
+				page_data.push(page);
+			}
+			
+			this.pages = new PageCollection(page_data);
+			this.pagesview = new ActionTable.Paginate.Views.Pages(
+ 				{
+ 					el : this.paginate_ul,
+ 					collection : this.pages,
+ 					targetView : targetView
+ 				}
+ 			);
 		}
-	});
+		//$(self.data('header_checkbox')).prop('checked', false)
+	}
+};
+/*
+	single_page : function()
+	{
+		this.data('pages').reset();
+	},
+	move_to_page : function(page_number)
+	{
+		var self = this;
+		return this.each(function(){
+			self.data('settings')['selection_params']['page_offset'] =  (self.data('settings')['selection_params']['page_limit'] * (page_number-1))
+
+			if(self.data('settings')['server_side_processing']){
+				self.action_table('fetch_data');
+			} else {
+	 			 
+				 _.filter(self.data('pages').models, function(page){  page.set({selected: false},{silent:true}) });
+				self.data('pages').models[page_number-1].set({selected: true}, {silent:true});
+				self.data('pages').reset(self.data('pages').models);
+				self.data('rows').reset(self.data('rows').models);
+			}
+		});
+	},
+	current_page : function()
+	{
+		var self = this;
+		return (Math.ceil(self.data('settings')['selection_params']['page_offset']/self.data('settings')['selection_params']['page_limit'])) + 1
+	
+	},
+	*/
+ActionTable.Paginate.Views.Pages = Backbone.View.extend({
+	initialize: function(){
+		_.bindAll(this,'render','appendItem');
+		this.collection.bind('add',this.appendItem);
+		this.collection.bind('reset',this.render);
+		this.collection.bind('change',this.render);
+		this.render();
+	},
+	render: function(){
+		$(this.el).html('');
+		
+		_(this.collection.models).each(function(page){
+			this.appendItem(page);
+		}, this)
+		
+		if(this.targetView.philtered_array.length > 1) 
+		{
+			$('<li><a href="#">Prev</a></li>').click(function(){
+				if (this.targetView.information.page != 1) this.targetView.goTo(page - 1)
+			}).prependTo($(this.el));
+			$('<li><a href="#">Next</a></li>').click(function(){
+				if (this.targetView.information.page != 1) this.targetView.goTo(page + 1)
+			}).appendTo($(this.el));
+		}
+		
+		if(this.targetView.information.page < this.targetView.information.totalPages - 6 )  $('<li class="disabled"><a href="#">...</a></li>').insertBefore($(this.el).find('li.last_page'))
+		if(this.targetView.information.page > 5 )  $('<li class="disabled"><a href="#">...</a></li>').insertAfter($(this.el).find('li.first_page'))
+		
+	},
+	appendItem : function(page)
+	{
+		var view = this;
+		var pageView = new ActionTable.Paginate.Views.Page({
+			model : page
+		});
+
+		$(this.el).append(this.render().el);
+	}
+});
+
+ActionTable.Paginate.Views.Page = Backbone.View.extend({
+	tagName : 'li',
+	initialize : function()
+	{
+		_.bindAll(this,'render','unrender','remove');
+		//this.model.bind('change', this.render);
+		this.model.bind('remove',this.unrender);
+	},
+	events : 
+	{
+		'click' : 'toggle_selection'
+	},
+	toggle_selection : function(e)
+	{
+		this.model.attributes.action(this.model.attributes.name);
+	},
+	render: function()
+	{
+		var el = $(this.el);
+		el.html('');
+		if (self.data('pages').models.length > 10) {
+			var index = _.indexOf(self.data('pages').models,args.model);
+			var current_page = self.action_table('current_page');
+
+			if (
+				index == 0 || 
+				(current_page < 5 && index < 10 ) ||
+				Math.abs(index - current_page )< 5 || 
+				(index == self.data('pages').models.length - 1) ||
+				(current_page > self.data('pages').models.length - 5 && index > self.data('pages').models.length - 12) 
+			){
+				var page_link = $(Mustache.to_html(self.data('settings')['page_link_template'], args.model.attributes)).appendTo(this.el);
+				if (args.model.attributes.selected) 
+				{
+					page_link.addClass('active');
+				}
+				else
+				{
+					page_link.removeClass('active');
+				}
+				if(index == 0) $(this.el).addClass('first_page');
+				if(index == (self.data('pages').length -1)) $(this.el).addClass('last_page')
+				 return this;
+			} else
+			{
+				
+				return false;
+			}
+			
+		} else {
+			var page_link = $(Mustache.to_html(self.data('settings')['page_link_template'], args.model.attributes)).appendTo(this.el);
+			if (args.model.attributes.selected) 
+			{
+				page_link.addClass('active');
+			}
+			else
+			{
+				page_link.removeClass('active');
+			}
+			return this
+		}
+		
+		
+	},
+	
+	
+	unrender: function()
+	{
+		var el = $(this.el);
+		el.fadeOut('fast', function(){el.remove()});
+	},
+	
+	remove: function()
+	{
+		this.model.destroy();
+	}
+});
+
+
+/*
+},
+	pageview : function(args)
+	{
+		var self = this;
+		
+		var View = Backbone.View.extend({
+			tagName : 'li',
+			
+			initialize : function()
+			{
+				_.bindAll(this,'render','unrender','remove');
+				//this.model.bind('change', this.render);
+				this.model.bind('remove',this.unrender);
+			},
+			events : 
+			{
+				'click' : 'toggle_selection'
+			},
+			toggle_selection : function(e)
+			{
+				this.model.attributes.action(this.model.attributes.name);
+			},
+			render: function()
+			{
+				var el = $(this.el);
+				el.html('');
+				if (self.data('pages').models.length > 10) {
+					var index = _.indexOf(self.data('pages').models,args.model);
+					var current_page = self.action_table('current_page');
+
+					if (
+						index == 0 || 
+						(current_page < 5 && index < 10 ) ||
+						Math.abs(index - current_page )< 5 || 
+						(index == self.data('pages').models.length - 1) ||
+						(current_page > self.data('pages').models.length - 5 && index > self.data('pages').models.length - 12) 
+					){
+						var page_link = $(Mustache.to_html(self.data('settings')['page_link_template'], args.model.attributes)).appendTo(this.el);
+						if (args.model.attributes.selected) 
+						{
+							page_link.addClass('active');
+						}
+						else
+						{
+							page_link.removeClass('active');
+						}
+						if(index == 0) $(this.el).addClass('first_page');
+						if(index == (self.data('pages').length -1)) $(this.el).addClass('last_page')
+						 return this;
+					} else
+					{
+						
+						return false;
+					}
+					
+				} else {
+					var page_link = $(Mustache.to_html(self.data('settings')['page_link_template'], args.model.attributes)).appendTo(this.el);
+					if (args.model.attributes.selected) 
+					{
+						page_link.addClass('active');
+					}
+					else
+					{
+						page_link.removeClass('active');
+					}
+					return this
+				}
+				
+				
+			},
+			
+			
+			unrender: function()
+			{
+				var el = $(this.el);
+				el.fadeOut('fast', function(){el.remove()});
+			},
+			
+			remove: function()
+			{
+				this.model.destroy();
+			}
+		});
+		return new View(args);
+	},
+	reset_page_numbers : function()
+	{
+		var self = this;
+		return this.each(function(){
+			self.data('settings')['selection_params']['page_offset'] = 0
+			
+		})
+	}
+};
+*/

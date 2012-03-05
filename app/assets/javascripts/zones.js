@@ -59,7 +59,10 @@ Pf1.Routers.Zones = Backbone.Router.extend({
 			}
 			zones_view.render();
 		});
-		Pf1.Views.clientPaging = new ActionTable.clientPagination({collection: zones_collection, view : zones_view});
+		$('<a href="#" class="btn">3</a>').click(function(){
+			zones_view.goTo(3);
+		}).insertAfter($('#zones_table'));
+		//Pf1.Views.clientPaging = new ActionTable.clientPagination({collection: zones_collection, view : zones_view});
 		
 	}
 	
