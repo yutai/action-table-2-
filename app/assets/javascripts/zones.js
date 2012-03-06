@@ -59,6 +59,15 @@ Pf1.Routers.Zones = Backbone.Router.extend({
 			zones_view.render();
 		});
 		
+		var dirGroup = $('<div class="btn-group"></div>').insertBefore($('#zones_table'));
+		var upBtn = $('<a href="#" class="btn">Up</a>').appendTo( dirGroup).click(function(){
+			console.log('clicked up')
+			zones_view.pager('name');
+		});
+		var downBtn = $('<a href ="#" class="btn">Down</a>').appendTo(dirGroup).click(function(){
+			console.log('clicked down')
+			zones_view.pager('name','desc');
+		});
 		
 		
 	}

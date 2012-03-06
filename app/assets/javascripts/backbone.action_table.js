@@ -23,8 +23,13 @@ ActionTable.Rows = {
 	philter : function()
 	{
 		return _(this.models);
+	},
+	_filter : function()
+	{
+		return this.models
 	}
 };
+
 
 
 
@@ -86,6 +91,7 @@ ActionTable.Paginate = function(){
 	self.Pages = Backbone.Collection.extend({
 		model : self.Page
 	});
+	
 	
 	/////////////////////////////
 	//
@@ -224,9 +230,11 @@ ActionTable.Paginate = function(){
 	});
 };
 
-
-
-
+ActionTable.Collections = {};
+ActionTable.Collections.FilteredRow = Backbone.Model.extend({});
+ActionTable.Collections.FilteredRows = Backbone.Collection.extend({
+	model : ActionTable.Collections.FilteredRow
+});
 
 
 ActionTable.RowsView = {
@@ -239,17 +247,26 @@ ActionTable.RowsView = {
 		this.collection.bind('add',this.appendItem);
 		this.collection.bind('change',this.render);
 		this.collection.bind('reset',this.render);
-		this.collection.bind('sort',this.sort)
+		this.collection.bind('sort',this.sort);
 		this.render();
 		this.paginator_ui = new ActionTable.Paginate();
 		this.paginator_ui.init($('#paginate'),this);
+	},
+	filteredRows : new ActionTable.Collections.FilteredRows([]),
+	resetFilteredRows : function(){
+		this.filteredRows.reset(this.collection._filter());
+	},
+	tester : function(){
+		console.log('TESTTESTESTTESTSETSTSE')
 	},
 	philtered_array : [],
 	paginator_ui : null,
 	render: function(){
 		this.tbody.html('');
 		this.philtered_array = this.collection.philter();
-		console.log('in ActionTable.RowsView render, philtered array size is ' + this.philtered_array.size());
+		this.resetFilteredRows();
+		console.log('in ActionTable.RowsView render, filteredRows is ');
+		console.log(this.filteredRows);
 		this.pager().each(function(row){
 			this.appendItem(row);
 		}, this)
@@ -281,21 +298,22 @@ ActionTable.RowsView = {
 	},
 
 	pager : function (sort, direction) {
+		console.log('pager called')
 		var self = this,
 			start = (self.cParams.page-1)*this.cParams.perPage,
 			stop  = start+self.cParams.perPage;
 
-		/*
+		
 		if (sort) {
 			this.philtered_array = self._sort(this.philtered_array, sort, direction);
 		}
-*/	
+
 
 		return _(this.philtered_array.slice(start,stop))
 	},
 
 	_sort : function (sort, direction) {
-		/*
+		
 		this.philtered_array = this.philtered_array.sort(function(a,b) {
 			var a = a.get(sort),
 				b = b.get(sort);
@@ -321,7 +339,7 @@ ActionTable.RowsView = {
 
 			return 0;
 		});
-*/
+
 		return this.philtered_array;
 	},
 	info : function () {
