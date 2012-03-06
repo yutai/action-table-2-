@@ -4,7 +4,7 @@
  * 
  *   - Seems like the page count reset is best done by updating the cParams.page in the RowsView
  *   - Consider doing a slice for the viewable page numbers as well
- * 
+ *  
  * 
  */
 
