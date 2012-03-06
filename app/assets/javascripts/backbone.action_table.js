@@ -1,3 +1,14 @@
+/*
+ * 
+ * Notes to self: 
+ * 
+ *   - Seems like the page count reset is best done by updating the cParams.page in the RowsView
+ *   - Consider doing a slice for the viewable page numbers as well
+ * 
+ * 
+ */
+
+
 
 var ActionTable = {};
 
@@ -61,6 +72,13 @@ ActionTable.Paginate = function(){
 		console.log('in paginate update');
 		self.pages.reset(page_data);
 	};
+	
+	/////////////////////////////
+	//
+	// Models and Collections
+	//
+	/////////////////////////////
+	
 	self.Page = Backbone.Model.extend({
 		attributes: { selected : false }
 	});
@@ -68,6 +86,13 @@ ActionTable.Paginate = function(){
 	self.Pages = Backbone.Collection.extend({
 		model : self.Page
 	});
+	
+	/////////////////////////////
+	//
+	// Views
+	//
+	/////////////////////////////
+	
 	
 	self.PagesView = Backbone.View.extend({
 		initialize: function(){
@@ -148,7 +173,7 @@ ActionTable.Paginate = function(){
 					index == 0 || 
 					(current_page < 5 && index < 10 ) ||
 					Math.abs(index - current_page )< 5 || 
-					(index == this.model.collection.models.length - 1) ||
+					(index == this.model.collection.models.length ) ||
 					(current_page > this.model.collection.models.length - 5 && index > this.model.collection.models.length - 12) 
 				){
 					var page_link = $(Mustache.to_html(this.template, this.model.attributes)).appendTo(this.el);
@@ -219,10 +244,9 @@ ActionTable.RowsView = {
 		this.paginator_ui = new ActionTable.Paginate();
 		this.paginator_ui.init($('#paginate'),this);
 	},
-	philtered_array : [1,2],
+	philtered_array : [],
 	paginator_ui : null,
 	render: function(){
-		
 		this.tbody.html('');
 		this.philtered_array = this.collection.philter();
 		console.log('in ActionTable.RowsView render, philtered array size is ' + this.philtered_array.size());
@@ -245,31 +269,11 @@ ActionTable.RowsView = {
 		sortDirection: 'asc'
 	},
 	
-	nextPage : function () {
-		this.cParams.page = ++this.cParams.page;
-		//this.pager();
-		this.render();
-	},
-
-	previousPage : function () {
-		this.cParams.page = --this.cParams.page || 1;
-		//this.pager();
-		this.render();
-	},
-
 	goTo : function (page) {
 		this.cParams.page = parseInt(page,10);
 		///this.pager();
 		this.render();
 	},
-
-	howManyPer : function (perPage) {
-		this.cParams.page = 1;
-		this.cParams.perPage = perPage;
-		//this.pager();
-		this.render();
-	},
-
 
 	// where column is the key to sort on
 	setSort : function (column, direction) {
