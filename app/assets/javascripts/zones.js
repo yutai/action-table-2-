@@ -1,4 +1,4 @@
-window.PaginatorFIlterRails1 = {
+window.Pf1 = {
 	Models: {},
 	Collections: {},
 	Views: {},
@@ -7,16 +7,17 @@ window.PaginatorFIlterRails1 = {
 		new Pf1.Routers.Zones;
 		Backbone.history.start();
 	},
-	autoApproveStatus : function(collection, state)
+	customFilters :
 	{
-		return _(collection.filter(function(data) {
-			return data.get("auto_approve") == state;
-		}));
-	},
-	philtered_array : []
+		autoApproveStatus : function(collection, state)
+		{
+			return collection.filter(function(data) {
+				return data.get("auto_approve") == state;
+			});
+		}
+	}
 };
 
-var Pf1 = PaginatorFIlterRails1;
 
 
 Pf1.Routers.Zones = Backbone.Router.extend({
@@ -26,47 +27,68 @@ Pf1.Routers.Zones = Backbone.Router.extend({
 	},
 	index : function ()
 	{
+		//////////////////////////////////
+		//
+		// Initialize collection and View
+		//
+		//////////////////////////////////
+		
 		var zones_collection = new Pf1.Collections.Zones();
-		zones_collection.fetch();
 		zones_view = new Pf1.Views.Zones({
 			el         : $('#zones_table'), 
 			collection : zones_collection
 		});
-
+		
+		
+		
+		////////////////////
+		//
+		// Optional headers
+		//
+		////////////////////
+		
+		var headerize = new ActionTable.Header();
+		var headers = [
+			{ name : "ID", sort : 'id', numeric : true},
+			{ name : "Zone name", sort : 'name'},
+			{ name : "Zone url", sort : 'site_name'},
+			{ name : "Auto-approve", sort : 'auto_approve'}
+		];
+		headerize.init(zones_view,headers);
+		
+		/////////////////////
+		//
+		// create UI for custom filters
+		//
+		/////////////////////
+		
 		var btnGroup = $('<div class="btn-group"></div>').insertBefore($('#zones_table'));
-		var showActiveAndInactive = $('<a href="#" class="btn">Both</a>').appendTo( btnGroup);
-		var showActive = $('<a href ="#" class="btn">active</a>').appendTo(btnGroup);
-		var showInactive = $('<a href="#" class="btn">inactive</a>').appendTo( btnGroup);
+		var showActiveAndInactive = $('<a href="#" class="btn">All zones</a>').appendTo( btnGroup);
+		var showActive = $('<a href ="#" class="btn">Auto-approve enabled</a>').appendTo(btnGroup);
+		var showInactive = $('<a href="#" class="btn">Auto-approve disabled</a>').appendTo( btnGroup);
+		
 		showActiveAndInactive.click(function(){
-			zones_collection.philter = function()
+			zones_collection._filter = function()
 			{
-				return _(this.models);
+				return this.models;
 			}
-			zones_view.render();
+			zones_view.render(1);
 		});
 		showActive.click(function(){
-			zones_collection.philter = function()
+			zones_collection._filter = function()
 			{
-				return Pf1.autoApproveStatus(zones_collection,true);
+				return Pf1.customFilters.autoApproveStatus(zones_collection.models,true);
+				
 			}
-			zones_view.render();
+			zones_view.render(1);
 		});
 		showInactive.click(function(){
-			zones_collection.philter = function()
+
+			zones_collection._filter = function()
 			{
-				return Pf1.autoApproveStatus(zones_collection,false);
+				return Pf1.customFilters.autoApproveStatus(zones_collection.models,false);
 			}
-			zones_view.render();
-		});
-		
-		var dirGroup = $('<div class="btn-group"></div>').insertBefore($('#zones_table'));
-		var upBtn = $('<a href="#" class="btn">Up</a>').appendTo( dirGroup).click(function(){
-			console.log('clicked up')
-			zones_view.pager('name');
-		});
-		var downBtn = $('<a href ="#" class="btn">Down</a>').appendTo(dirGroup).click(function(){
-			console.log('clicked down')
-			zones_view.pager('name','desc');
+			zones_view.render(1);
 		});
 		
 		
@@ -79,43 +101,18 @@ Pf1.Routers.Zones = Backbone.Router.extend({
 Pf1.Models.Zone = Backbone.Model.extend({});
 _.extend(Pf1.Models.Zone.prototype, ActionTable.Row);
 
-
 Pf1.Collections.Zones = Backbone.Collection.extend({
 	url : '/zones',
 	model : Pf1.Models.Zone
 });
 _.extend(Pf1.Collections.Zones.prototype, ActionTable.Rows);
 
-
-Pf1.Views.Zones = Backbone.View.extend({
-	update: function()
-	{
-		this.tbody.html(''); 
-		_(this.models).each(function(row){
-			row.change();
-		})
-	},
-	appendItem : function(row)
-	{
-		var view = this;
-		var rowView = new Pf1.Views.Zone({
-			model : row
-		});
-		if(rowView) this.tbody.append(rowView.render().el);
-	}
-})
+Pf1.Views.Zones = Backbone.View.extend({})
 _.extend(Pf1.Views.Zones.prototype, ActionTable.RowsView);
 
 Pf1.Views.Zone = Backbone.View.extend({
-	
 	tagName : 'tr',
-	initialize : function()
-	{
-		_.bindAll(this,'render','unrender','remove');
-		this.bind('remove',this.unrender);
-		this.model.bind('change', this.render)
-	},
-	template : "<td>{{attr.name}}</td><td>{{attr.site_name}}</td><td><input type='checkbox' class='checkbox' /></td>",
+	template : "<td>{{attr.id}}</td><td>{{attr.name}}</td><td>{{attr.site_name}}</td><td><input type='checkbox' class='checkbox' /></td>",
 	events : 
 	{
 		'click input' : 'toggle_selection'
