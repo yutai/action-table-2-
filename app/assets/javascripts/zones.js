@@ -32,8 +32,7 @@ Pf1.Routers.Zones = Backbone.Router.extend({
 			el         : $('#zones_table'), 
 			collection : zones_collection
 		});
-		console.log('zones_view is')
-		console.log(zones_view)
+
 		var btnGroup = $('<div class="btn-group"></div>').insertBefore($('#zones_table'));
 		var showActiveAndInactive = $('<a href="#" class="btn">Both</a>').appendTo( btnGroup);
 		var showActive = $('<a href ="#" class="btn">active</a>').appendTo(btnGroup);
@@ -59,10 +58,8 @@ Pf1.Routers.Zones = Backbone.Router.extend({
 			}
 			zones_view.render();
 		});
-		$('<a href="#" class="btn">3</a>').click(function(){
-			zones_view.goTo(3);
-		}).insertAfter($('#zones_table'));
-		//Pf1.Views.clientPaging = new ActionTable.clientPagination({collection: zones_collection, view : zones_view});
+		
+		
 		
 	}
 	
