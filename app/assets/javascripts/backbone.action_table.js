@@ -4,19 +4,7 @@ var ActionTable = {};
 ActionTable.Row = {
 	saveStrip : function(options)
 	{
-		var store_custome_attributes = {};
-		for(var key in this.collection.customizers)
-		{
-			store_custome_attributes[key] = this.get(key);
-			this.unset(key);
-		}
 		this.save({success: options.success});
-		for(var key in store_custome_attributes)
-		{
-			var attribute = {};
-			attribute[key] = store_custome_attributes[key];
-			this.set(attribute)
-		}
 	},
 };
 
@@ -25,11 +13,6 @@ ActionTable.Rows = {
 	_filter : function()
 	{
 		return this.models
-	},
-	paramed_fetch : function(params, statusDiv)
-	{
-		statusDiv.top_of_page_status('loading')
-		this.fetch({ data: $.param(params), success: function(){statusDiv.top_of_page_status('clear')} });
 	}
 };
 
@@ -123,7 +106,6 @@ ActionTable.Header = function()
 			{
 				current_selection[i].set({selected:false})
 			}
-			
 			if (this.model.get('numeric'))
 			{
 				this.options.targetView.numericalSort(this.model.get('sort'), this.model.get('dir'))
@@ -373,11 +355,7 @@ ActionTable.RowsView = {
 		this.collection.bind('sort',this.sort);
 		this.paginator_ui = new ActionTable.Paginate();
 		this.paginator_ui.init($('#paginate'),this);
-		this.fetch_collection();
-	},
-	fetch_collection : function()
-	{
-		this.collection.paramed_fetch(this.options.fetch_params, this.options.statusDiv)
+		this.collection.fetch();
 	},
 	filteredRows : new ActionTable.Collections.FilteredRows([]),
 	resetFilteredRows : function(){
@@ -412,12 +390,11 @@ ActionTable.RowsView = {
 		if (this.paginator_ui) {
 			this.paginator_ui.update(this.info());
 		} 
-		this.tbody.find("tr:odd").css("background-color", "#f5f5f5");
 	},
 	
 	cParams : {
 		// how many items to show per page in the view?
-		perPage : 10,
+		perPage : 5,
 		// page to start off on for pagination in the view?
 		page : 1,
 		// sort field
@@ -466,26 +443,15 @@ ActionTable.RowsView = {
 		{
 			dir = 1;
 		}
-		function getAttributes(model, attributes)
-		{
-			if (_.isArray(attributes)) {
-				var attr = model.get(attributes[0]);
-				for (var a = 1; a < attributes.length; a++)
-				{
-					attr = attr[attributes[a]] 
-				}
-				return attr
-			} else if(_.isString(attributes)) {
-				return model.get(attributes)
-			}
-		}
+		
+		
 		this.collection.comparator = function(a,b) 
 		{
 			a.sort = true;
 			b.sort = true;
-			if( (parseInt(getAttributes(a,attribute))) > (parseInt(getAttributes(b,attribute)))){
+			if( (parseInt(a.attributes[attribute])) > (parseInt(b.attributes[attribute]))){
 				return dir*1;
-			} else if( (parseInt(getAttributes(a,attribute))) < (parseInt(getAttributes(b,attribute)))) {
+			} else if ( (parseInt(a.attributes[attribute])) < (parseInt(b.attributes[attribute]))) {
 				return dir*-1;
 			} else {
 				return 0;
@@ -526,6 +492,7 @@ ActionTable.RowsView = {
 			lastPagem1    : totalPages-1,
 			previous      : false,
 			next          : false,
+			page_set      : [],
 			startRecord   : (self.cParams.page - 1) * self.cParams.perPage + 1,
 			endRecord     : Math.min(totalRecords, self.cParams.page * self.cParams.perPage)
 		};
@@ -538,16 +505,59 @@ ActionTable.RowsView = {
 			info.next = self.cParams.page + 1;
 		}
 
-
+		info.pageSet = self.setPagination(info);
 
 		self.information = info;
 
 		
 		return info;
+	},
+
+
+	setPagination : function (info) {
+		var pages = [];
+
+
+		// How many adjacent pages should be shown on each side?
+		var ADJACENT = 3;
+		var ADJACENTx2 = ADJACENT*2;
+		var LASTPAGE = Math.ceil(info.totalRecords/info.perPage);
+		var LPM1 = -1;
+
+		if (LASTPAGE > 1) {
+			// not enough pages to bother breaking it up
+			if (LASTPAGE < (7 + ADJACENTx2)) {
+				for (var i=1,l=LASTPAGE; i <= l; i++) {
+					pages.push(i);
+				}
+			}
+			// enough pages to hide some
+			else if (LASTPAGE > (5 + ADJACENTx2)) {
+
+				//close to beginning; only hide later pages
+				if (info.page < (1 + ADJACENTx2)) {
+					for (var i=1, l=4+ADJACENTx2; i < l; i++) {
+						pages.push(i);				
+					}
+				}
+
+				// in middle; hide some front and some back
+				else if(LASTPAGE - ADJACENTx2 > info.page && info.page > ADJACENTx2) {
+					for (var i = info.page - ADJACENT; i <= info.page + ADJACENT; i++) {
+						pages.push(i);				
+					}	
+				}
+				// close to end; only hide early pages
+				else{
+					for (var i = LASTPAGE - (2 + ADJACENTx2); i <= LASTPAGE; i++) {
+						pages.push(i);					
+					}
+				}
+			}
+		}
+
+		return pages;
 	}
-
-
-	
 };
 
 
@@ -557,18 +567,19 @@ ActionTable.RowView = {
 	{
 		_.bindAll(this,'render','unrender','remove');
 		this.bind('remove',this.unrender);
-		this.model.bind('save', this.render)
+		this.model.bind('change', this.render)
 	},
 	update_successful : function()
 	{
+		console.log(this.model)
 	},
 	render: function()
 	{
+		console.log('in rowview render')
 		var el = $(this.el);
 		el.html('');
 		var tr = $(Mustache.to_html(this.template, {attr : this.model.toJSON(), check_status : (this.model.attributes.auto_approve) ? "checked=checked" : ''})).appendTo(this.el);
 		tr.find('input.checkbox').prop("checked",this.model.attributes.auto_approve);
-		if(this.rowFunction) { this.rowFunction();}
 		return this
 	},
 	unrender: function()
